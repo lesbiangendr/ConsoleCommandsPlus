@@ -4,6 +4,8 @@
 class Yoshi_ConsoleCommandsPlus_CheatManager_Hat extends Yoshi_ConsoleCommandsPlus_CheatManager_Unreal
     abstract;
 
+var int ChokeGameCount;
+
 //Hat_CheatManager
 exec function SetAct(int act)
 {

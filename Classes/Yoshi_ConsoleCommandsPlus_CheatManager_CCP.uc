@@ -151,6 +151,48 @@ exec function KillAllEnemies()
 	}
 }
 
+exec function DistBetween(string Actor1, string Actor2) {
+	local Actor a, FirstActor, SecondActor;
+	
+	foreach class'WorldInfo'.static.GetWorldInfo().AllActors(class'Actor', A) {
+		if(A.Name == Name(Actor1)) {
+			FirstActor = a;
+		}
+		else if(A.Name == Name(Actor2)) {
+			SecondActor = a;
+		}
+	}
+
+	PrintDistBetween(FirstActor, SecondActor);
+}
+
+exec function DistBetweenCoopPlayers() {
+	PrintDistBetween(Pawn, Hat_Player(Pawn).GetOtherPlayer());
+}
+
+function PrintDistBetween(Actor FirstActor, Actor SecondActor) {
+	local float distance, distanceNoZ;
+	local Vector firstActorLoc, secondActorLoc;
+
+	if(FirstActor != None && SecondActor != None) {
+
+		firstActorLoc = FirstActor.Location;
+		secondActorLoc = SecondActor.Location;
+
+		distance = Abs(VSize(firstActorLoc - secondActorLoc));
+
+		firstActorLoc.Z = 0;
+		secondActorLoc.Z = 0;
+		distanceNoZ = Abs(VSize(firstActorLoc - secondActorLoc));
+
+		Print("Distance Between: " @ `ShowVar(FirstActor) @ "and" @ `ShowVar(SecondActor) $ "\nDistance:" @ distance $ "\nDistanceNoZ:" @ distanceNoZ);
+
+	}
+	else {
+		Print("ERROR: All Actors Not Found! " @ `ShowVar(FirstActor) @ `ShowVar(SecondActor));
+	}
+}
+
 //
 //Player Effects
 //
