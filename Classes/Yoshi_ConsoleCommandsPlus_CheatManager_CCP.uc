@@ -1009,7 +1009,6 @@ exec function UnlockAbsolutelyEverything() {
 	UnlockBaseballBat();
 	GiveAllCameraFilters();
 	GiveAllStickers();
-	SaveGame();
 }
 
 //
@@ -1303,74 +1302,14 @@ function string RecursiveSoundCueTree(SoundNode node, string SoundCueStr, string
 	return SoundCueStr;
 }
 
-exec function SpawnClassExplicit(class<Actor> ClassName) {
-	Pawn.Spawn(ClassName);
-}
+exec function GoToBossState(Name StateName, optional Name Label) {
+	local Hat_Enemy_Boss boss;
 
-exec function SpawnClassImplicit(string ClassName, optional string PackageName) {
-	Pawn.Spawn(class'Hat_ClassHelper'.static.ActorClassFromName(ClassName, PackageName));
-}
-
-exec function DoFindObject(optional string ObjectName, optional class ObjectClass = class'Class') {
-	local Object obj;
-
-	obj = FindObject(ObjectName, ObjectClass);
-	Print("DoFindObject " $ `ShowVar(obj));
-}
-
-exec function DoDynamicLoadObject(optional string ObjectName, optional class ObjectClass = class'Class') {
-	local Object obj;
-
-	obj = DynamicLoadObject(ObjectName, ObjectClass);
-	Print("DoDynamicLoadObject " $ `ShowVar(obj));	
-}
-
-exec function GetScriptClass(string ClassName) {
-	Print(class'Hat_ClassHelper'.static.GetScriptClass(ClassName));
-}
-
-exec function DynamicLoadSpawn(string ObjectName) {
-	local Actor a;
-	local Object DLO;
-
-	DLO = DynamicLoadObject(ObjectName, class'Class');
-
-	Print("DynamicLoadSpawn: " $ `ShowVar(DLO) @ `ShowVar(class<Object>(DLO)) @ `ShowVar(class<Actor>(DLO)));
-	a = Pawn.Spawn(class<Actor>(DLO));
-	Print("Result: " $ `ShowVar(a));
-}
-
-exec function LoadObject(class<Object> ObjectClass, optional string ObjectName) {
-	local Object obj;
-
-	Print("LoadObject " $ `ShowVar(ObjectClass) @ `ShowVar(ObjectName));
-	obj = class'Hat_ClassHelper'.static.LoadObject(ObjectClass, ObjectName);
-	Print("Result:" $ `ShowVar(obj));
-}
-
-exec function StarblasterSpawn(string ClassName, optional string PackageName) {
-	SpawnEX(Pawn, ClassName, PackageName);
-}
-
-static final function Actor SpawnEX(
-    Actor             caller,
-    string            spawnClassName,
-    optional string   spawnClassPackage,
-    optional Actor      spawnOwner,
-    optional Name     spawnTag,
-    optional vector   spawnLocation = caller.Location,
-    optional rotator  spawnRotation = caller.Rotation,
-    optional Actor    actorTemplate,
-    optional bool      bNoCollisionFail
-)
-{
-    local class<Actor> spawnClass;
-    
-    spawnClass = class'Hat_ClassHelper'.static.ActorClassFromName(spawnClassName, spawnClassPackage);
-    if (caller != None && spawnClass != None)
-        return caller.Spawn(spawnClass, spawnOwner, spawnTag, spawnLocation, spawnRotation, actorTemplate, bNoCollisionFail);
-    
-    return None;
+	foreach class'WorldInfo'.static.GetWorldInfo().DynamicActors(class'Hat_Enemy_Boss', boss) {
+		if(boss != None && boss.Controller != None) {
+			boss.Controller.GoToState(StateName, Label);
+		}
+	}
 }
 
 //Mini Mission
@@ -1790,6 +1729,11 @@ exec function SnatcherFight() {
 exec function MustacheGirlFight() {
 	CustomRestart("castle_mu", Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.Mu_Finale', 1, Texture2D'HatInTime_Titlecards_Ch5.Textures.chapter5_1');
 	`GameManager.SetCurrentCheckpoint(8, false);
+}
+
+exec function MustacheGirlHyperzone() {
+	CustomRestart("castle_mu", Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.Mu_Finale', 1, Texture2D'HatInTime_Titlecards_Ch5.Textures.chapter5_1');
+	`GameManager.SetCurrentCheckpoint(10, false);
 }
 
 exec function AlpineIntro() {
