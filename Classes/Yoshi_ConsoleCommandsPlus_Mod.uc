@@ -2,10 +2,15 @@
 //Keep in mind that Cheat Manager Mods aren't compatible with each other.
 //PLEASE consider asking me before making another Cheat Manager, chances are what you want can be added into mine without ruining the compatibility of other mods.
 class Yoshi_ConsoleCommandsPlus_Mod extends GameMod;
+
 var config int ConsoleAlwaysEnabled;
 
-const VANESSAS_CURSE_MAP = "1VCMansion";
-const TEMPERATURE_CLASH_MAP = "firebattlearena";
+// A list of maps that Console Commands Plus is specifically set to be disabled in.
+// This is to help protect Multiplayer competitive integrity in places such as Vanessa's Curse.
+//
+// I am well aware this protection can be circumvented with enough effort, but I respectfully request that you do not do so to cheat.
+// These maps have been added specifically by the mod/CDLC developers' requests. Thank you for understanding <3 
+var const array<string> BannedMaps;
 
 var Yoshi_ConsoleCommandsPlus_CheatManager_CCP CM;
 
@@ -25,8 +30,19 @@ var Vector DoneLocation;
 var float DoneRadius;
 var bool JustResetTimer;
 
+function bool IsInBannedMap(string MapName) {
+	local int i;
+
+	for(i = 0; i < BannedMaps.length; i++) {
+		if(MapName ~= BannedMaps[i]) return true;
+	}
+
+	return false;
+}
+
 event OnModLoaded() {
-	if(`GameManager.GetCurrentMapFilename() ~= VANESSAS_CURSE_MAP || `GameManager.GetCurrentMapFilename() ~= TEMPERATURE_CLASH_MAP) return;
+	if(IsInBannedMap(`GameManager.GetCurrentMapFilename())) return;
+	
 
 	HookActorSpawn(class'Hat_Player', 'Hat_Player');
 	SetManager();
@@ -47,12 +63,11 @@ event OnHookedActorSpawn(Object NewActor, Name Identifier) {
 	} 
 }
 
-
-
 event Tick(float delta) {
 	local GameViewportClient GVC;
 	local Hat_Player Kid;
-	if(`GameManager.GetCurrentMapFilename() ~= VANESSAS_CURSE_MAP || `GameManager.GetCurrentMapFilename() ~= TEMPERATURE_CLASH_MAP) return;
+
+	if(IsInBannedMap(`GameManager.GetCurrentMapFilename())) return;
 
 	if(GetMultiBit("MILActive") == 1) TickMultiLevel();
 
@@ -95,7 +110,7 @@ event OnModUnloaded() {
 
 //2 is Manual
 function SetManager() {
-	if(`GameManager.GetCurrentMapFilename() ~= VANESSAS_CURSE_MAP || `GameManager.GetCurrentMapFilename() ~= TEMPERATURE_CLASH_MAP) return;
+	if(IsInBannedMap(`GameManager.GetCurrentMapFilename())) return;
 	if(GetALocalPlayerController() == None) return;
 
 	Hat_PlayerController(GetALocalPlayerController()).CheatClass = class'Yoshi_ConsoleCommandsPlus_CheatManager_CCP';
@@ -138,7 +153,7 @@ function OnPostInitGame() {
 	local PlayerController PC;
 	local Rotator r;
 
-	if(`GameManager.GetCurrentMapFilename() ~= VANESSAS_CURSE_MAP || `GameManager.GetCurrentMapFilename() ~= TEMPERATURE_CLASH_MAP) return;
+	if(IsInBannedMap(`GameManager.GetCurrentMapFilename())) return;
 
 	if(CM != None) {
 		CM.OnPostInitGame();
@@ -227,7 +242,7 @@ function TickMultiLevel() {
 
 function OnTimePieceCollected(string Identifier) {
 	local int LevelsCompleted;
-	if(`GameManager.GetCurrentMapFilename() ~= VANESSAS_CURSE_MAP || `GameManager.GetCurrentMapFilename() ~= TEMPERATURE_CLASH_MAP) return;
+	if(IsInBannedMap(`GameManager.GetCurrentMapFilename())) return;
 
 	if(GetMultiBit("MILActive") == 1) {
 
@@ -249,4 +264,11 @@ function OnTimePieceCollected(string Identifier) {
 			class'Yoshi_ConsoleCommandsPlus_CheatManager_CCP'.static.RestartIL();
 		}
 	}
+}
+
+defaultproperties
+{
+	BannedMaps.Add("1VCMansion") // Vanessa's Curse
+	BannedMaps.Add("firebattlearena") // Temperature Clash
+	BannedMaps.Add("HattleRoyaleMafiaTown") // Hattle Royale
 }
