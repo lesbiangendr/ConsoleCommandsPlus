@@ -954,6 +954,18 @@ exec function GiveAllStickers() {
 	}
 }
 
+exec function AddBackpack(class<Object> item, optional class<Hat_CosmeticItemQualityInfo> ItemQualityInfo)
+{
+	local Hat_PlayerController pc;
+	pc = Hat_PlayerController(Outer);
+	
+	pc.GetLoadout().AddBackpack(class'Hat_Loadout'.static.MakeLoadoutItem(item, ItemQualityInfo), false);
+}
+
+exec function RemoveHookshot() {
+	RemoveFromBackpack(class'Hat_Ability_Hookshot');
+}
+
 exec function RemoveFromBackpack(class<Object> item, optional class<Hat_CosmeticItemQualityInfo> ItemQualityInfo)
 {
 	local Hat_PlayerController pc;

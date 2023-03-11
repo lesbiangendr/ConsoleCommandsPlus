@@ -131,6 +131,35 @@ exec function LoadHover() {
 	}
 }
 
+exec static function StartContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.AddItem(contractClass);
+	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
+}
+
+exec static function FinishContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.RemoveItem(contractClass);
+	save.TurnedInSnatcherContracts.AddItem(contractClass);
+}
+
+exec static function RemoveContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.RemoveItem(contractClass);
+	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
+}
+
+exec static function RemoveAllSnatcherContracts() {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.Length = 0;
+	save.TurnedInSnatcherContracts.Length = 0;
+	save.CompletedSnatcherContracts.Length = 0;
+}
+
 exec function ResetMetroTimePieces() {
 	local Hat_TimeObject_Base A;
 	local int i;
@@ -357,6 +386,12 @@ exec function ResetSnatcherBag() {
 	ids.AddItem("contract_unlock_actid");
 
 	RemoveMultipleFlags(ids, maps);	
+}
+
+exec function ResetAllWalls() {
+	ResetYellowWall();
+	ResetBlueWall();
+	ResetGreenWall();
 }
 
 exec function ResetYellowWall() {
