@@ -1474,6 +1474,22 @@ exec function NumberOfChallengeRoadIDs() {
 	Print("Number of Challenge Road IDs: " $ Hat_SaveGame(`SaveManager.SaveData).ChallengeRoadIDs.Length);
 }
 
+exec function PrintAllChallengeRoadIDs() {
+	local int i;
+	local string str;
+	local Hat_SaveGame Save;
+
+	str = "All Challenge Road IDs:\n";
+
+	Save = Hat_SaveGame(`SaveManager.SaveData);
+
+	for(i = 0; i < Save.ChallengeRoadIDs.Length; i++) {
+		str $= "[" $ i $ "]: " $ Save.ChallengeRoadIDs[i] $ "\n";
+	}
+	
+	Print(str);
+}
+
 exec function PrintChallengeRoadID(int Index) {
 	if(Hat_SaveGame(`SaveManager.SaveData).ChallengeRoadIDs.Length > Index) {
 		Print("Challenge Road Index " $ Index $ ": " $ Hat_SaveGame(`SaveManager.SaveData).ChallengeRoadIDs[Index]);
