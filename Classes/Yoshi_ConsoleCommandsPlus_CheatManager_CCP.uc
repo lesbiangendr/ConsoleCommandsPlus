@@ -663,6 +663,50 @@ exec function RemoveAllDeathWishStamps() {
 	}
 }
 
+exec function ResetAllOfDeathWish() 
+{
+    local Array< Class<Object> > AllDeathWishes;
+    local int i;
+    
+    AllDeathWishes = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_SnatcherContract_DeathWish");
+    for (i = 0; i < AllDeathWishes.Length; i++)
+    {
+        class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.SoftResetObjectives();
+        class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.DebugResetObjectives();
+        class'Hat_SaveBitHelper'.static.RemoveLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID()$"_MenuHasStamps", 1, `GameManager.HubMapName);
+        class'Hat_SaveBitHelper'.static.RemoveLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID()$"_MenuNew", 1, `GameManager.HubMapName);
+    }
+
+    ResetBitsForDeathWish();
+}
+
+function ResetBitsForDeathWish()
+{
+    local Hat_SaveGame_Base s;
+    local int i, e;
+
+    s = `SaveManager.GetCurrentSaveData();
+
+    class'Hat_SaveBitHelper'.static.SetLevelBits("DeathWish_ResetUnlocked", 0, `GameManager.HubMapName);
+    class'Hat_SaveBitHelper'.static.SetLevelBits("DeathWish_25CompleteGratz", 0, `GameManager.HubMapName);
+    class'Hat_SaveBitHelper'.static.SetLevelBits("DeathWish_50CompleteGratz", 0, `GameManager.HubMapName);
+    class'Hat_SaveBitHelper'.static.SetLevelBits("DeathWish_75CompleteGratz", 0, `GameManager.HubMapName);
+    class'Hat_SaveBitHelper'.static.SetLevelBits("DeathWish_AllCompleteGratz", 0, `GameManager.HubMapName);
+
+    for (i = s.LevelSaveInfo.Length-1; i >= 0; i--)
+    {
+        for (e = s.LevelSaveInfo[i].LevelBits.Length-1; e >= 0; e--)
+        {
+            if (InStr(s.LevelSaveInfo[i].LevelBits[e].ID, "Hat_SnatcherContract_DeathWish_CameraTourist",, true) != INDEX_NONE
+                || InStr(s.LevelSaveInfo[i].LevelBits[e].ID, "DeathWishLevelToken",, true) != INDEX_NONE)
+            {
+                s.LevelSaveInfo[i].LevelBits.Remove(e, 1);
+                continue;
+            }
+        }
+    }
+}
+
 //
 //General Collectibles
 //
@@ -960,6 +1004,54 @@ exec function AddBackpack(class<Object> item, optional class<Hat_CosmeticItemQua
 	pc = Hat_PlayerController(Outer);
 	
 	pc.GetLoadout().AddBackpack(class'Hat_Loadout'.static.MakeLoadoutItem(item, ItemQualityInfo), false);
+}
+
+exec function UnlockAllRoulette() {
+	local array<Hat_BackpackItem> ItemsToAdd;
+	local array< class<Object> > HeadgearClasses, SkinClasses, RemixClasses;
+	local array< class<Hat_CosmeticItemQualityInfo> > CosmeticItemQualityInfos;
+	local array< class<Hat_ItemQuality> > ItemQualities;
+	local Hat_Loadout Loadout;
+
+	local class<Object> ItemClass;
+	local int i;
+	local Hat_BackpackItem Item;
+
+	Loadout = Hat_PlayerController(Outer).GetLoadout();
+
+	HeadgearClasses = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_Ability_Trigger");
+	SkinClasses = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_Collectible_Skin");
+	RemixClasses = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_Collectible_Remix");
+
+	CosmeticItemQualityInfos = class'Hat_HUDMenuTimeRiftRoulette_Base'.static.GetItemQualityInfos();
+
+	ItemQualities.AddItem(class'Hat_ItemQuality_Legendary');
+	ItemQualities.AddItem(class'Hat_ItemQuality_Epic');
+	ItemQualities.AddItem(class'Hat_ItemQuality_Rare');
+	ItemQualities.AddItem(None);
+
+	for(i = 0; i < ItemQualities.Length; i++) {
+		
+		foreach HeadgearClasses(ItemClass) {
+			class'Hat_HUDMenuTimeRiftRoulette_Base'.static.CheckAndAddHat(ItemClass, Loadout, ItemQualities[i], CosmeticItemQualityInfos, ItemsToAdd);
+		}
+
+		foreach SkinClasses(ItemClass) {
+			class'Hat_HUDMenuTimeRiftRoulette_Base'.static.CheckAndAddSkin(ItemClass, Loadout, ItemQualities[i], ItemsToAdd);
+		}
+
+		foreach RemixClasses(ItemClass) {
+			class'Hat_HUDMenuTimeRiftRoulette_Base'.static.CheckAndAddRemix(ItemClass, Loadout, ItemQualities[i], ItemsToAdd);
+		}
+
+		Print("Searched Item Quality:" @ ItemQualities[i] @ "(New Total:" @ ItemsToAdd.Length @ "items)");
+	}
+
+	Print("Unlocked" @ ItemsToAdd.Length @ "Roulette Items!");
+
+	foreach ItemsToAdd(Item) {
+		Loadout.AddBackpack(Item, false);
+	}
 }
 
 exec function RemoveHookshot() {
