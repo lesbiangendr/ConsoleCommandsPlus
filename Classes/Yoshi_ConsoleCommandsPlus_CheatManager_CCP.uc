@@ -809,6 +809,12 @@ exec function GiveBadgeSlots() {
 	GiveCollectible("Hat_Collectible_BadgeSlot2", 1);
 }
 
+exec function GiveAllWeapons() {
+	AddToBackpack(class'Hat_Weapon_Umbrella');
+	AddToBackpack(class'Hat_Weapon_Nyakuza_BaseballBat');
+	AddToBackpack(GetActorClass("Tag_Weapon_GothicUmbrella", "VanessaCurseMod"));
+}
+
 exec function UnlockBaseballBat() {
 	local Hat_PlayerController pc;
 
@@ -861,7 +867,6 @@ exec function GiveBaseGameOutfits() {
 	AddtoBackPack(class'Hat_Collectible_Skin_Girly');
 	AddtoBackPack(class'Hat_Collectible_Skin_Wahoo');
 	AddToBackpack(class'Hat_Collectible_Skin_Black');
-
 	
 	AddToBackpack(class'Hat_Ability_Help', class'Hat_CosmeticItemQualityInfo_Help_Ribbon');
 	AddToBackpack(class'Hat_Ability_Help', class'Hat_CosmeticItemQualityInfo_Help_Stripes');
@@ -917,10 +922,44 @@ exec function GiveDLC1Outfits() {
 	AddToBackpack(class'Hat_Ability_StatueFall', class'Hat_CosmeticItemQualityInfo_IceHat_Knight');	
 }
 
+exec function GiveVanessasCurseOutfits() {
+
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_BodyMaterial_GoldenCrown", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_Pastel", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_Roll", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_BlueBomber", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_Violet", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_BodyMaterial_Film", "VanessaCurseMod"));
+	AddToBackpack(GetActorClass("Tag_Collectible_Skin_Punk", "VanessaCurseMod"));
+
+
+	AddToBackpack(class'Hat_Ability_Sprint', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_SprintHat_Bunny", "VanessaCurseMod")));
+	AddToBackpack(class'Hat_Ability_Sprint', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_SprintHat_Crown", "VanessaCurseMod")));
+	AddToBackpack(class'Hat_Ability_Sprint', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_SprintHat_FeatherMask", "VanessaCurseMod")));
+	AddToBackpack(class'Hat_Ability_Sprint', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_SprintHat_PunkCap", "VanessaCurseMod")));
+
+	AddToBackpack(class'Hat_Ability_Chemical', class<Hat_CosmeticItemQualityInfo>(GetClass("Hat_CosmeticItemQualityInfo_Chemical_Donut", "VanessaCurseMod")));
+	AddToBackpack(class'Hat_Ability_Chemical', class<Hat_CosmeticItemQualityInfo>(GetClass("Hat_CosmeticItemQualityInfo_Chemical_Lamp", "VanessaCurseMod")));
+
+	AddToBackpack(class'Hat_Ability_StatueFall', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_IceHat_Cube", "VanessaCurseMod")));
+	AddToBackpack(class'Hat_Ability_StatueFall', class<Hat_CosmeticItemQualityInfo>(GetClass("Tag_CosmeticItemQualityInfo_IceFox", "VanessaCurseMod")));
+
+	AddToBackpack(class'Hat_Ability_Chemical', class<Hat_CosmeticItemQualityInfo>(GetClass("Hat_CosmeticItemQualityInfo_FoxMask_Visualizer", "VanessaCurseMod")));
+}
+
+static function class<Actor> GetActorClass(string ClassName, optional string PackageName = "") {
+	return class'Hat_ClassHelper'.static.ActorClassFromName(ClassName, PackageName);
+}
+
+static function class<Object> GetClass(string ClassName, optional string PackageName = "") {
+	return class'Hat_ClassHelper'.static.ClassFromName(ClassName, PackageName);
+}
+
 exec function GiveAllOutfits() {
 	GiveBaseGameOutfits();
 	GiveDLC1Outfits();
 	GiveDLC2Outfits();
+	GiveVanessasCurseOutfits();
 }
 
 //This is actually just a subset of what would be in GiveAllOutfits, but it was requested.
@@ -1104,13 +1143,12 @@ exec function UnlockAbsolutelyEverything() {
 	GiveAllDeathWishStamps();
 	GiveAllHats();
 	GiveAllBadges();
-	UnlockUmbrella();
+	GiveAllWeapons();
 
 	//Unlock the cosmetics too!
 
 	GiveAllOutfits();
 	GiveAllRemixes();
-	UnlockBaseballBat();
 	GiveAllCameraFilters();
 	GiveAllStickers();
 }

@@ -131,33 +131,20 @@ exec function LoadHover() {
 	}
 }
 
-exec static function StartContract(class<Hat_SnatcherContract_Act> contractClass) {
-	local Hat_SaveGame save;
-	save = `SaveManager.GetCurrentSaveData();
-	save.SnatcherContracts.AddItem(contractClass);
-	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
+exec function ResetTimeRiftPortals() {
+	SetTimePieceCompletion(false, "TimeRift");
 }
 
-exec static function FinishContract(class<Hat_SnatcherContract_Act> contractClass) {
+static function SetTimePieceCompletion(bool completion, string id) {
 	local Hat_SaveGame save;
+	local int i;
 	save = `SaveManager.GetCurrentSaveData();
-	save.SnatcherContracts.RemoveItem(contractClass);
-	save.TurnedInSnatcherContracts.AddItem(contractClass);
-}
-
-exec static function RemoveContract(class<Hat_SnatcherContract_Act> contractClass) {
-	local Hat_SaveGame save;
-	save = `SaveManager.GetCurrentSaveData();
-	save.SnatcherContracts.RemoveItem(contractClass);
-	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
-}
-
-exec static function RemoveAllSnatcherContracts() {
-	local Hat_SaveGame save;
-	save = `SaveManager.GetCurrentSaveData();
-	save.SnatcherContracts.Length = 0;
-	save.TurnedInSnatcherContracts.Length = 0;
-	save.CompletedSnatcherContracts.Length = 0;
+    for (i = 0; i < save.TimeObjects.Length; i++)
+    {
+		if (InStr(save.TimeObjects[i].ID, id) >= 0) {
+			save.TimeObjects[i].Collected = completion;
+		}
+    }
 }
 
 exec function ResetMetroTimePieces() {
@@ -310,17 +297,30 @@ static exec function RestartIL(optional bool SoftChangeLevel = false) {
     }
 }
 
-static exec function ResetMapCollectibles() {
+static exec function ResetMapCollectibles(optional int chapterNumber = -1, optional int actNumber = -1) {
 	local string chapterName;
-	local int actNumber;
 	local WorldInfo wi;
 	local Array<string> ids;
 	local Array<string> maps;
+	local array<Hat_ChapterInfo> AllChapterInfo;
+	local Hat_ChapterInfo ChapterInfo;
 
 	wi = class'WorldInfo'.static.GetWorldInfo();
 
-	chapterName = Hat_GameManager(wi.Game).GetChapterInfo().ChapterName;
-	actNumber = Hat_GameManager(wi.Game).GetCurrentAct();
+	if(chapterNumber == -1 && actNumber == -1) {
+		chapterName = Hat_GameManager(wi.Game).GetChapterInfo().ChapterName;
+		actNumber = Hat_GameManager(wi.Game).GetCurrentAct();
+	}
+	else {
+		AllChapterInfo = class'Hat_ChapterInfo'.static.GetAllChapterInfo();
+
+		foreach AllChapterInfo(ChapterInfo) {
+			if(ChapterInfo.ChapterID == chapterNumber) {
+				chapterName = ChapterInfo.ChapterName;
+			}
+		}
+	}
+	
 	maps = GetMapsForChapterAndAct(chapterName, actNumber);
 
 	ids.AddItem("hat_collectible_badgepart");
@@ -330,6 +330,104 @@ static exec function ResetMapCollectibles() {
 	ids.AddItem("hat_impactinteract_breakable_chemical_crate");
 	ids.AddItem("hat_goodie_vault");
 	ids.AddItem("hat_eyeblockade");
+
+	RemoveMultipleFlags(ids, maps);
+}
+
+exec function ResetLevelFlags(optional int chapterNumber = -1, optional int actNumber = -1) {
+	local string chapterName;
+	local Array<string> ids;
+	local Array<string> maps;
+	local array<Hat_ChapterInfo> AllChapterInfo;
+	local Hat_ChapterInfo ChapterInfo;
+
+	if(chapterNumber == -1 && actNumber == -1) {
+		chapterName = Hat_GameManager(WorldInfo.Game).GetChapterInfo().ChapterName;
+		actNumber = Hat_GameManager(WorldInfo.Game).GetCurrentAct();
+	}
+	else {
+		AllChapterInfo = class'Hat_ChapterInfo'.static.GetAllChapterInfo();
+
+		foreach AllChapterInfo(ChapterInfo) {
+			if(ChapterInfo.ChapterID == chapterNumber) {
+				chapterName = ChapterInfo.ChapterName;
+			}
+		}
+	}
+	
+	maps = GetMapsForChapterAndAct(chapterName, actNumber);
+	ids.Length = 0;
+
+	if (chapterName == "Chapter1_MafiaTown") {
+		if (actNumber == 4)
+			ids.AddItem("mafia_hq_intro_cinematic");
+	}
+	else if (chapterName == "Chapter2_Subcon") {
+		ids.AddItem("hat_subconpainting_green");
+		ids.AddItem("hat_bonfire_green");
+		ids.AddItem("hat_snatchercontractsummon");
+		ids.AddItem("hat_snatchercontract_icewall");
+		ids.AddItem("hat_snatchercontract_toilet");
+		ids.AddItem("hat_snatchercontract_vanessa");
+		ids.AddItem("hat_snatchercontract_maildelivery");
+
+		ClearAllContracts();
+		TurnInTwoContracts();
+
+		if (actNumber == 1) {
+			StartContract(class'Hat_SnatcherContract_IceWall');
+		}
+		else if (actNumber == 2) {
+			StartContract(class'Hat_SnatcherContract_IceWall');
+			ids.AddItem("hat_subconpainting_blue");
+			ids.AddItem("hat_bonfire_blue");
+			ids.RemoveItem("hat_snatchercontract_icewall");
+			SetFlag("hat_snatchercontract_icewall", maps, 3);
+		}
+		else if (actNumber == 3) {
+			StartContract(class'Hat_SnatcherContract_Toilet');
+		}
+		else if (actNumber == 5) {
+			StartContract(class'Hat_SnatcherContract_MailDelivery');
+		}
+	}
+	else if (chapterName == "Chapter4_Sand") {
+		if (actNumber == 1)
+			ids.AddItem("hat_sandstationhorn_0");
+	}
+
+	RemoveMultipleFlags(ids, maps);
+}
+
+exec function ResetContractualObligations() {
+	local Array<string> ids;
+	local Array<string> maps;
+
+	maps = GetMapsForChapterAndAct("Chapter2_Subcon", 1);
+
+	ClearAllContracts();
+
+	ids.AddItem("contract_unlock_actid");
+	ids.AddItem("hat_bonfire_yellow");
+	ids.AddItem("hat_subconpainting_yellow");
+
+	RemoveMultipleFlags(ids, maps);
+}
+
+exec function ResetAlpineIntro() {
+	local Array<string> ids;
+	local Array<string> maps;
+
+	maps = GetMapsForChapterAndAct("Chapter4_Sand", 1);
+
+	ids.AddItem("actless_freeroam_intro_complete");
+	ids.AddItem("hat_sandstationhorn_1");
+
+	SetTimePieceCompletion(false, "Alpine_Twilight");
+	SetTimePieceCompletion(false, "AlpineSkyline_WeddingCake");
+	SetTimePieceCompletion(false, "AlpineSkyline_Windmill");
+	SetTimePieceCompletion(false, "Alps_Birdhouse");
+	SetTimePieceCompletion(false, "AlpineSkyline_Finale");
 
 	RemoveMultipleFlags(ids, maps);
 }
@@ -430,6 +528,41 @@ exec function ResetGreenWall() {
 	RemoveMultipleFlags(ids, maps);
 }
 
+exec static function StartContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.AddItem(contractClass);
+	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
+}
+
+exec static function FinishContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.RemoveItem(contractClass);
+	save.TurnedInSnatcherContracts.AddItem(contractClass);
+}
+
+exec static function RemoveContract(class<Hat_SnatcherContract_Act> contractClass) {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.RemoveItem(contractClass);
+	save.TurnedInSnatcherContracts.RemoveItem(contractClass);
+}
+
+exec static function RemoveAllSnatcherContracts() {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.SnatcherContracts.Length = 0;
+	save.TurnedInSnatcherContracts.Length = 0;
+	save.CompletedSnatcherContracts.Length = 0;
+}
+
+static function TurnInTwoContracts() {
+	local Hat_SaveGame save;
+	save = `SaveManager.GetCurrentSaveData();
+	save.TurnedInSnatcherContracts.AddItem(class'Hat_SnatcherContract_IceWall');
+	save.TurnedInSnatcherContracts.AddItem(class'Hat_SnatcherContract_MailDelivery');
+}
 
 static function SetFlag(String id, Array<string> maps, int value) {
 	local int i;
@@ -499,6 +632,15 @@ static function Array<string> GetMapsForChapterAndAct(string chapterName, int ac
 	}
 	else if (chapterName == "Chapter5_Finale") {
 		maps.AddItem("castle_mu");
+	}
+	else if (chapterName == "Chapter6_Cruise") {
+		maps.AddItem("ship_main");
+		if(actNumber == 3) {
+			maps.AddItem("ship_sinking");
+		}
+	}
+	else if (chapterName == "Chapter7_Metro") {
+		maps.AddItem("dlc_metro");
 	}
 
 	return maps;
