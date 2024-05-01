@@ -193,6 +193,32 @@ function PrintDistBetween(Actor FirstActor, Actor SecondActor) {
 	}
 }
 
+static function MaterialInterface GetActualMaterial(MaterialInterface mat) //Returns actual (Editor-created) MaterialInterface.
+{
+    local MaterialInstance inst;
+    inst = MaterialInstance(mat);
+    if (inst == None)
+        return mat;
+    if (inst.IsInMapOrTransientPackage())
+        return GetActualMaterial(inst.Parent);
+    return inst;
+}
+
+exec function PrintPlayerMaterials() {
+	local int i, j;
+	local array<MeshComponent> Comps;
+
+	Comps = Hat_Player(Hat_PlayerController(GetALocalPlayerController()).Pawn).GetMyMaterialMeshComponents();
+
+	for(i = 0; i < Comps.Length; i++) {
+		Print("[" $ i $ "]" @ (SkeletalMeshComponent(Comps[i]) != None ? SkeletalMeshComponent(Comps[i]).SkeletalMesh.Name : Comps[i].Name));
+
+		for(j = 0; j < Comps[i].GetNumElements(); j++) {
+			Print("[" $ i $ "][" $ j $ "]" @ GetActualMaterial(Comps[i].GetMaterial(j)));
+		}
+	}
+}
+
 //
 //Player Effects
 //
@@ -223,6 +249,38 @@ exec function SetRot(float Pitch, float Yaw, float Roll) {
 
 exec function GetRot() {
 	Print("Player Rotation: " $ Pawn.Rotation);
+}
+
+exec function SetCamRot(float Pitch, float Yaw, float Roll) {
+	local Rotator NewRot;
+	local SetRotationGradually srg;
+	local Hat_PlayerController pc;
+
+	pc = Hat_PlayerController(Pawn.Controller);
+
+	NewRot.Pitch = Pitch;
+	NewRot.Yaw = Yaw;
+	NewRot.Roll = Roll;
+
+	srg.Rotation = NewRot;
+	srg.AffectYaw = true;
+	srg.AffectPitch = true;
+	srg.AffectRoll = true;
+	srg.TurnTime = 0.0;
+
+	pc.SetRotationSequence = srg;
+	class'Hat_SeqAct_SetActorRotation'.static.OnSetActorRotation(pc, pc.SetRotationSequence);
+
+	Hat_PlayerCamera(pc.PlayerCamera).ResetCameraDistance();
+}
+
+exec function GetCamRot() {
+	local Vector CamPos;
+	local Rotator CamRot;
+
+	Hat_PlayerController(Pawn.Controller).GetPlayerViewPoint(CamPos, CamRot);
+
+	Print("Camera Rotation: " $ CamRot);
 }
 
 exec function SetHealth(int health) {
@@ -510,13 +568,13 @@ exec function PrintTimePieceIDs(int chapter) {
 
 function string PrintChapterTimePieceInfo(Hat_ChapterInfo ci, string ChapterName) {
 	local int i;
-	local string IDs;
-	IDs $= ChapterName $ ": ";
+	local string Times;
+	Times $= ChapterName $ ": ";
 	ci.ConditionalUpdateActList();
 	for(i = 0; i < ci.ChapterActInfo.Length; i++) {
-		IDs $= "\n" $ (i + 1) $ ". " $ ci.ChapterActInfo[i].Hourglass;
+		Times $= "\n" $ (i + 1) $ ". " $ ci.ChapterActInfo[i].Hourglass;
 	}
-	return IDs;
+	return Times;
 }
 
 exec function GiveTimePiece(string str) {
@@ -585,10 +643,8 @@ exec function RemoveAllDummyTimePieces() {
 	for (i = 0; i < num; i++) {
 
 		if(`GameManager.HasTimePiece("debug_timepiece_" $ i)) {
-			num++;
-		}
-		else {
 			`SaveManager.GetCurrentSaveData().RemoveTimePiece("debug_timepiece_" $ i);
+			num++;
 		}
 	}
 	Print("File cleared of Dummy Time Pieces.");
@@ -705,6 +761,158 @@ function ResetBitsForDeathWish()
             }
         }
     }
+}
+
+exec function LoadDeathWish(class<Hat_SnatcherContract_DeathWish> DeathWish)
+{
+	local Hat_ChapterInfo ChapterInfo;
+	local Hat_ChapterActInfo ActInfo;
+	local PlayerController PlayerController;
+	local Hat_HUD HatHUD;
+	local Hat_HUDElementActTitleCard TitleCard;
+	local MaterialInstanceConstant TitleCaMaterialInstance;
+	local string ChapterName, ActName, MapName;
+	local Texture2D TitlecardBackground, CoopIcon;
+	local Array<GameModInfo> ModList;
+	local int ModIndex;
+	local bool ShouldPlayDeathWishTitlecardMusic;
+	
+	ActInfo = DeathWish.default.ActInfo;
+	ChapterInfo = ActInfo != None ? ActInfo.ChapterInfo : None;
+	MapName = ActInfo != None ? ActInfo.MapName : "";
+	
+	if (DeathWish == class'Hat_SnatcherContract_ChallengeRoad')
+	{
+		MapName = class<Hat_SnatcherContract_ChallengeRoad>(DeathWish).static.GetFirstMapName();
+		`GameManager.LoadNewAct(99, 1);
+		class'Hat_SnatcherContract_ChallengeRoad'.static.SetActiveLevelModFirstMap();
+
+	}
+	else if (ChapterInfo != None)
+	{
+		`GameManager.LoadNewAct(ChapterInfo.ChapterID, ActInfo != None ? ActInfo.ActID : 1);
+	}
+	else
+	{
+		`GameManager.LoadNewAct(99, 1);
+	}
+	
+	`if(`isdefined(WITH_DLC2))
+	if (class'Hat_GameManager'.default.AssistMode && DeathWish.default.HasEasyMode)
+		DeathWish.static.SetDeathWishEasyMode(true);
+	`endif
+	
+
+	if (ActInfo != None && ActInfo == Hat_ChapterActInfo'HatinTime_ChapterInfo.AlpineSkyline.AlpineSkyline_Finale')
+		class'Hat_SeqCond_IsAlpineFinale'.static.ForceEnableAlpineFinale();
+	
+	if (DeathWish.default.AllowedMaps.length > 0 && DeathWish.default.AllowedMaps.Find(MapName) == INDEX_NONE)
+		MapName = DeathWish.default.AllowedMaps[0];
+	
+	if (DeathWish.default.ObjectiveWorkshopRemoteIDs.length > 0 && MapName == "")
+	{
+		ModList = class'GameMod'.static.GetModList();
+		for (ModIndex = 0; ModIndex < ModList.Length; ModIndex++)
+		{
+			if (ModList[ModIndex].WorkshopID == INDEX_NONE) continue;
+			if (!ModList[ModIndex].IsInstalled) continue;
+			if (ModList[ModIndex].FirstMap == "") continue;
+			if (DeathWish.default.ObjectiveWorkshopRemoteIDs.Find(class'GameMod'.static.GetModIDString(ModList[ModIndex].WorkshopID)) == INDEX_NONE) continue;
+			
+			MapName = ModList[ModIndex].FirstMap;
+			break;
+		}
+	}
+
+	if (DeathWish.default.StartCheckpoint > 0)
+		`GameManager.SetCurrentCheckpoint(DeathWish.default.StartCheckpoint, false, false);
+
+	if (DeathWish.default.StartAct > 0)
+		`GameManager.SetCurrentAct(DeathWish.default.StartAct);
+	
+	if (MapName != "" && !class'Hat_ClassHelper'.static.PackageExists(MapName))
+	{
+		`broadcast("Unable to find map '" $ MapName $ "'");
+		MapName = "";
+	}
+	
+	`if(`isdefined(WITH_DLC1))
+	class'Hat_SaveBitHelper'.static.AddLevelBit("IsOnActiveDeathWish", 1, `GameManager.HubMapName);
+	`endif
+
+	//
+	Hat_SaveGame(`SaveManager.SaveData).ActiveDeathWishes.AddItem(DeathWish);
+	//
+	
+	// Open title card
+	if (MapName != "")
+	{
+        //So identifiers don't conflict
+        if (DeathWish != class'Hat_SnatcherContract_ChallengeRoad')
+		    class'GameMod'.static.ResetActiveLevelMod();
+            
+		PlayerController = `GameManager.GetALocalPlayerController();
+		if (PlayerController != None && PlayerController.myHUD != None)
+		{
+			HatHUD = Hat_HUD(PlayerController.myHUD);
+			if (HatHUD != None)
+			{
+				ChapterName = "";
+				ShouldPlayDeathWishTitlecardMusic = true;
+				if (DeathWish.static.ConsiderForDeathWishTotal())
+				{
+					if (DeathWish.default.IsCommunity)
+						ChapterName = Caps(class'Hat_Localizer'.static.GetGame("levels", "Community"));
+					else if (DeathWish.default.DeathWishGroupID == '' || DeathWish.default.DeathWishGroupID == 'DeathWish' || DeathWish.default.DeathWishGroupID == 'Modding')
+						ChapterName = Caps(class'Hat_Localizer'.static.GetGame("levels", "DeathWish"));
+					else
+					{
+						ChapterName = Caps(string(DeathWish.default.DeathWishGroupID));
+						ShouldPlayDeathWishTitlecardMusic = false;
+					}
+				}
+
+				if (DeathWish.default.IsCommunity)
+					ActName = Caps(DeathWish.static.GetShortLocalizedTitle());
+				else
+					ActName = Caps(DeathWish.static.GetLocalizedTitle());
+				
+				TitlecardBackground = ActInfo != None ? ActInfo.GetTitleCardBackground() : None;
+				CoopIcon = class'Hat_HUDElementActTitleCard'.default.DefaultCoopIcon[Rand(class'Hat_HUDElementActTitleCard'.default.DefaultCoopIcon.Length)];
+				if (ActInfo != None && ActInfo.CoopIcon != None) CoopIcon = ActInfo.CoopIcon;
+				if (ActInfo != None && ActInfo.IsBonus && TitlecardBackground == None)
+				{
+					if (ActInfo.RequiredActID.Length > 0)
+					{
+						TitlecardBackground = class'Hat_HUDMenuActSelect'.default.TitleCard_TimeRiftWater;
+						CoopIcon = class'Hat_HUDElementActTitleCard'.default.TimeRift_Water_CoopIcon;
+					}
+					else
+						TitlecardBackground = class'Hat_HUDMenuActSelect'.default.TitleCard_TimeRiftCave;
+				}
+				if (DeathWish.static.GetTitleCard() != None)
+					TitlecardBackground = DeathWish.static.GetTitleCard();
+				
+				TitleCaMaterialInstance = new class'MaterialInstanceConstant';
+				TitleCaMaterialInstance.SetParent(class'Hat_HUDMenuDeathWish'.default.DeathWishTitleCardMaterial);
+				TitleCaMaterialInstance.SetTextureParameterValue('Texture', TitlecardBackground);
+				TitleCaMaterialInstance.SetTextureParameterValue('CoopIcon', CoopIcon);
+				TitleCaMaterialInstance.SetScalarParameterValue('DeathWishOverlay', DeathWish.static.GetTitleCard() == None ? 1 : 0);
+				TitleCaMaterialInstance.SetScalarParameterValue('CoopOverlay', `GameManager.IsCoop() ? 1 : 0);
+
+				TitleCard = Hat_HUDElementActTitleCard(HatHUD.OpenHUD(class'Hat_HUDElementActTitleCard', MapName));
+				TitleCard.SetTitleCardChapterActInfo(TitleCaMaterialInstance, ChapterName, ActName);
+				TitleCard.UseActSelectLoadingMusic = true;
+				TitleCard.IsDeathWish = ShouldPlayDeathWishTitlecardMusic;
+			}
+		}
+		
+		// fallback level transition if title card failed
+		if (TitleCard == None)
+		{
+			`GameManager.SoftChangeLevel(MapName);
+		}
+	}
 }
 
 //
@@ -1452,6 +1660,35 @@ exec function GoToBossState(Name StateName, optional Name Label) {
 			boss.Controller.GoToState(StateName, Label);
 		}
 	}
+}
+
+exec function PrintSpeedrunEmblemTimes(int chapter) {
+	local string IDs;
+
+	switch(chapter) {
+		case 0: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.hub_spaceship', "Spaceship"); break;
+		case 1: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.MafiaTown', "Mafia Town"); break;
+		case 2: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.trainwreck_of_science', "Battle of the Birds"); break;
+		case 3: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.subconforest', "Subcon Forest"); break;
+		case 4: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.Sand_and_Sails', "Alpine Skyline"); break;
+		case 5: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo.maingame.Mu_Finale', "Finale"); break;
+		case 6: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'HatinTime_ChapterInfo_DLC1.ChapterInfos.ChapterInfo_Cruise', "Arctic Cruise"); break;
+		case 7: IDs = PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo'hatintime_chapterinfo_dlc2.ChapterInfos.ChapterInfo_Metro', "Nyakuza Metro"); break;
+		default: IDs = "Invalid Chapter. Enter a chapter 0-7 (0 is Spaceship).";
+	}
+
+	Print(IDs);
+}
+
+function string PrintChapterSpeedrunEmblemTimes(Hat_ChapterInfo ci, string ChapterName) {
+	local int i;
+	local string Times;
+	Times $= ChapterName $ ": ";
+	ci.ConditionalUpdateActList();
+	for(i = 0; i < ci.ChapterActInfo.Length; i++) {
+		Times $= "\n" $ (i + 1) $ ". " $ class'Hat_Localizer'.static.GetGame("levels", ci.ChapterActInfo[i].ActName) $ ":" @ class'Hat_HUDElementSpeedrunTimer'.static.FormatTime(ci.ChapterActInfo[i].SpeedrunEmblemTime, true, false);
+	}
+	return Times;
 }
 
 //Mini Mission
