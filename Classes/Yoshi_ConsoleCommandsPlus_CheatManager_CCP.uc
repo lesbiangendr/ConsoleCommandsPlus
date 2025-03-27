@@ -359,15 +359,19 @@ optional float TimeBeforePlayerCanExit = 1.f, optional bool AnyButtonExits = fal
 	Hat_Player(Pawn).Taunt(TauntName,Taunt,freeze);
 }
 
-exec function DamagePlayer(int DamageAmount, optional string DamageTypeClass = "Hat_DamageType_Flamethrower") {
+exec function DamagePlayer(int DamageAmount, optional string DamageTypeClass) {
 	local Hat_Player ply;
 	local class TypeOfDamage;
 	ply = Hat_Player(Hat_PlayerController(Outer).Pawn);
 
+	if (DamageTypeClass == "") {
+		DamageTypeClass = "Hat_DamageType_Flamethrower";
+	}
+
 	TypeOfDamage = class'Hat_ClassHelper'.static.ClassFromName(DamageTypeClass);
 
-	if(ply != None && class<DamageType>(TypeOfDamage) != None) {
-		ply.TakeDamage(DamageAmount, Outer, ply.Location, Vect(0,0,0),class<DamageType>(TypeOfDamage));
+	if (ply != None && class<DamageType>(TypeOfDamage) != None) {
+		ply.TakeDamage(DamageAmount, Outer, ply.Location, Vect(0, 0, 0), class<DamageType>(TypeOfDamage));
 	}
 }
 
@@ -682,9 +686,9 @@ exec function GiveAllDeathWishStamps() {
 	AllDeathWishes = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_SnatcherContract_DeathWish");
 	for (i = 0; i < AllDeathWishes.Length; i++)
 	{
-		for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
-			class'Hat_SaveBitHelper'.static.AddLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
-		}
+		//for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
+		//	class'Hat_SaveBitHelper'.static.AddLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
+		//}
 	}
 }
 
@@ -697,9 +701,9 @@ exec function GiveAllDeathWishStampsForContract(string ContractName) {
 	for (i = 0; i < AllDeathWishes.Length; i++)
 	{
 		if(string(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.class) ~= ContractName) {
-			for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
-				class'Hat_SaveBitHelper'.static.AddLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
-			}
+			//for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
+			//	class'Hat_SaveBitHelper'.static.AddLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
+			//}
 			return;
 		}
 	}
@@ -713,9 +717,9 @@ exec function RemoveAllDeathWishStamps() {
 	AllDeathWishes = class'Hat_ClassHelper'.static.GetAllScriptClasses("Hat_SnatcherContract_DeathWish");
 	for (i = 0; i < AllDeathWishes.Length; i++)
 	{
-		for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
-			class'Hat_SaveBitHelper'.static.RemoveLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
-		}
+		//for(j = 0; j < class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.Objectives.Length; j++) {
+		//	class'Hat_SaveBitHelper'.static.RemoveLevelBit(class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).static.GetObjectiveBitID(), j+1, class<Hat_SnatcherContract_DeathWish>(AllDeathWishes[i]).default.ObjectiveMapName);
+		//}
 	}
 }
 
@@ -739,7 +743,8 @@ exec function ResetAllOfDeathWish()
 function ResetBitsForDeathWish()
 {
     local Hat_SaveGame_Base s;
-    local int i, e;
+	local int i;
+	local int j;
 
     s = `SaveManager.GetCurrentSaveData();
 
@@ -751,12 +756,12 @@ function ResetBitsForDeathWish()
 
     for (i = s.LevelSaveInfo.Length-1; i >= 0; i--)
     {
-        for (e = s.LevelSaveInfo[i].LevelBits.Length-1; e >= 0; e--)
+        for (j = s.LevelSaveInfo[i].LevelBits.Length - 1; j >= 0; j--)
         {
-            if (InStr(s.LevelSaveInfo[i].LevelBits[e].ID, "Hat_SnatcherContract_DeathWish_CameraTourist",, true) != INDEX_NONE
-                || InStr(s.LevelSaveInfo[i].LevelBits[e].ID, "DeathWishLevelToken",, true) != INDEX_NONE)
+            if (InStr(s.LevelSaveInfo[i].LevelBits[j].ID, "Hat_SnatcherContract_DeathWish_CameraTourist",, true) != INDEX_NONE
+                || InStr(s.LevelSaveInfo[i].LevelBits[j].ID, "DeathWishLevelToken",, true) != INDEX_NONE)
             {
-                s.LevelSaveInfo[i].LevelBits.Remove(e, 1);
+                s.LevelSaveInfo[i].LevelBits.Remove(j, 1);
                 continue;
             }
         }
@@ -809,20 +814,20 @@ exec function LoadDeathWish(class<Hat_SnatcherContract_DeathWish> DeathWish)
 	if (DeathWish.default.AllowedMaps.length > 0 && DeathWish.default.AllowedMaps.Find(MapName) == INDEX_NONE)
 		MapName = DeathWish.default.AllowedMaps[0];
 	
-	if (DeathWish.default.ObjectiveWorkshopRemoteIDs.length > 0 && MapName == "")
-	{
-		ModList = class'GameMod'.static.GetModList();
-		for (ModIndex = 0; ModIndex < ModList.Length; ModIndex++)
-		{
-			if (ModList[ModIndex].WorkshopID == INDEX_NONE) continue;
-			if (!ModList[ModIndex].IsInstalled) continue;
-			if (ModList[ModIndex].FirstMap == "") continue;
-			if (DeathWish.default.ObjectiveWorkshopRemoteIDs.Find(class'GameMod'.static.GetModIDString(ModList[ModIndex].WorkshopID)) == INDEX_NONE) continue;
+	//if (DeathWish.default.ObjectiveWorkshopRemoteIDs.length > 0 && MapName == "")
+	//{
+		//ModList = class'GameMod'.static.GetModList();
+		//for (ModIndex = 0; ModIndex < ModList.Length; ModIndex++)
+		//{
+			//if (ModList[ModIndex].WorkshopID == INDEX_NONE) continue;
+			//if (!ModList[ModIndex].IsInstalled) continue;
+			//if (ModList[ModIndex].FirstMap == "") continue;
+			//if (DeathWish.default.ObjectiveWorkshopRemoteIDs.Find(class'GameMod'.static.GetModIDString(ModList[ModIndex].WorkshopID)) == INDEX_NONE) continue;
 			
-			MapName = ModList[ModIndex].FirstMap;
-			break;
-		}
-	}
+			//MapName = ModList[ModIndex].FirstMap;
+			//break;
+		//}
+	//}
 
 	if (DeathWish.default.StartCheckpoint > 0)
 		`GameManager.SetCurrentCheckpoint(DeathWish.default.StartCheckpoint, false, false);
@@ -2196,13 +2201,13 @@ exec function ac(String ComboName, String ComboCommand) {
 
 exec function ComboCommand(String ComboName) {
 	local int i;
-	local int k;
+	local int j;
 	local Array<string> CommandParts;
 	for(i = 0; i < CCs.Combos.Length; i++) {
 		if(ComboName == CCs.Combos[i].ComboName) {
 			CommandParts = SplitString(CCs.Combos[i].ComboCommand, "+");
-			for(k = 0; k < CommandParts.Length; k++) {
-				ConsoleCommand(CommandParts[k]);
+			for(j = 0; j < CommandParts.Length; j++) {
+				ConsoleCommand(CommandParts[j]);
 			}
 			return;
 		}
